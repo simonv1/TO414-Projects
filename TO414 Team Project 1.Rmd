@@ -1,0 +1,98 @@
+---
+title: "TO 414 Team Project 1"
+author: "Simon Verghese"
+date: "2/19/2021"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r}
+library("ggplot2")
+library("leaflet")
+```
+
+```{r}
+#read in data
+hotels = read.csv('hotel_bookings.csv', stringsAsFactors = TRUE)
+```
+
+Questions to Answer:
+
+Intro:
+  Who is the report going to?
+  What is the overall goal of the report?
+  
+Content:
+  How should we spend our marketing budget?
+    What customer segments should we invest more into marketing to?
+    What are the demographics of our most popular customer?
+    What countries bring in the most revenue?
+    What distribution channel produces the most revenue?
+    Should we prioritize company bookings over individual bookings?
+  How should we manage bookings and staff?
+    What are our busiest times of the year?
+    How much does demand change from weekdays to weekends?
+    Should we overbook the hotel? If so, by how much?
+  What areas of our business need the most improvement?
+    How should we address the high cancellation rate?
+    How can we get more repeat customers?
+    
+Conclusion:
+  What did we find out?
+  What is our final recommendations?
+
+
+
+
+
+##What is the cancellation rate for the hotels?
+
+```{r}
+cancellation_rate = round(sum(hotels$is_canceled)/nrow(hotels), 2)
+cancellation_rate
+```
+The cancellation rate across all the hotels is 37%.
+
+
+##What month is the most popular?
+
+```{r}
+month_arrivals = sort(table(hotels$arrival_date_month))
+month_arrivals = data.frame(month_arrivals)
+ggplot(data = month_arrivals, aes(x = Var1,y = Freq)) + geom_bar(stat = "identity")
+``` 
+
+From the graph we can see that May, July, and August were the most popular months for both types of hotels.
+
+##How many companies came to the hotels?
+
+```{r}
+nlevels(hotels$company)
+```
+353 companies came to the hotels.
+
+##How many total bookings were from agencies?
+
+```{r}
+nrow(hotels) - summary(hotels$agent)[2]
+```
+103,050 bookings were made through agenceis.
+
+##Which countries had the most reservations?
+
+```{r}
+country_arrivals = sort(table(hotels$country), decreasing = TRUE)
+country_arrivals = data.frame(country_arrivals)[1:10,]
+country_arrivals
+ggplot(data = country_arrivals, aes(x = Var1,y = Freq)) + geom_bar(stat = "identity")
+```
+
+People from PRT, GBR, and FRA had the most bookings.
+
