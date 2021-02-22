@@ -125,7 +125,7 @@ In the above graphs, we can see that among paying customers, the corporate marke
 repeatstay = tapply(hotels$total_nights_stayed, hotels$is_repeated_guest, mean, na.rm=TRUE)
 names(repeatstay)[names(repeatstay) == 0] = "New"
 names(repeatstay)[names(repeatstay) == 1] = "Repeat"
-repeatstay
+round(repeatstay, 3)
 ```
 
 ###### Repeat vs New Customer Spending 
@@ -135,7 +135,7 @@ repeatstay
 repeatspend = tapply(hotels$adr, hotels$is_repeated_guest, mean, na.rm=TRUE)
 names(repeatspend)[names(repeatspend) == 0] = "New"
 names(repeatspend)[names(repeatspend) == 1] = "Repeat"
-repeatspend
+round(repeatspend, 3)
 ```
 
 Another customer segment that we should invest more into marketing to are our repeat customers. On average, they stay, half the time as non-repeat guests and spend about $40 less per night. This may be due to a variety of factors, such as because repeat customers come back often, they might spend less time on each visit. A rewards program based on spending could help incentive guests to revisit as well as spend more on each trip.
@@ -177,7 +177,7 @@ round(repeat_segment, 3)
 ```{r}
 #prop table for repeat guests and how long they waited
 repeat_waittime = prop.table(table(hotels$wait_long, hotels$is_repeated_guest), 1)
-repeat_waittime
+round(repeat_waittime, 3)
 ```
 
 
@@ -185,7 +185,7 @@ repeat_waittime
 ```{r}
 ##prop table for repeat guests and their type
 repeat_type = prop.table(table(hotels$customer_type, hotels$is_repeated_guest), 1) 
-repeat_type
+round(repeat_type, 3)
 ```
 
 From the above information, we can see some general trends. First, when looking at the market segment, Aviation, Complementary and Corporate segments have the greatest proportion of people who are repeat customers (all greater than 25%). 
@@ -269,7 +269,7 @@ The major issue facing the hotels is that there is a trend of high cancellation 
 prop_cancel = prop.table(table(hotels$is_canceled))
 names(prop_cancel)[names(prop_cancel) == 0] = "Not Canceled"
 names(prop_cancel)[names(prop_cancel) == 1] = "Canceled"
-prop_cancel
+round(prop_cancel, 3)
 ```
 
 The cancellation rate is ~37% across the entire data set. 
@@ -326,7 +326,7 @@ We can determine if there is a relationship between people who have canceled in 
 ```{r}
 #prop table comparing repeat cancellations to current canceled bookings
 propcancel <- prop.table(table(hotels$is_canceled, hotels$repeat_cancel),2)
-propcancel
+round(propcancel, 3)
 ```
 
 To further visualize this, lets create a graph.  
@@ -352,4 +352,4 @@ We hope that you find our analyses and recommendations useful moving forward and
 
 Best Regards,
 
-Chai and Some Biscuits
+Chai and Some Biscuits 
