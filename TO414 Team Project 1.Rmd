@@ -1,98 +1,355 @@
 ---
 title: "TO 414 Team Project 1"
-author: "Simon Verghese"
+author: "Simon Verghese, Izaak Ossege, Matthew Wilner, Bryan Yu, Ben Smith"
 date: "2/19/2021"
 output: 
   html_document:
     toc: true
-    toc_depth: 2
+    toc_depth: 4
     toc_float: true
 ---
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-```{r}
-library("ggplot2")
-library("leaflet")
+```{r include=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+library(ggplot2)
+library(dplyr)
 ```
 
 ```{r}
 #read in data
 hotels = read.csv('hotel_bookings.csv', stringsAsFactors = TRUE)
+#change necessary variable types to factors
+hotels$is_repeated_guest = as.factor(hotels$is_repeated_guest)
+hotels$arrival_date_year = as.factor(hotels$arrival_date_year)
+hotels$arrival_date_month = as.factor(hotels$arrival_date_month)
+hotels$arrival_date_week_number = as.factor(hotels$arrival_date_week_number)
+hotels$arrival_date_day_of_month = as.factor(hotels$arrival_date_day_of_month)
 ```
 
-Questions to Answer:
+# Introduction
 
-Intro:
-  Who is the report going to?
-  What is the overall goal of the report?
-  
-Content:
-  How should we spend our marketing budget?
-    What customer segments should we invest more into marketing to?
-    What are the demographics of our most popular customer?
-    What countries bring in the most revenue?
-    What distribution channel produces the most revenue?
-    Should we prioritize company bookings over individual bookings?
-  How should we manage bookings and staff?
-    What are our busiest times of the year?
-    How much does demand change from weekdays to weekends?
-    Should we overbook the hotel? If so, by how much?
-  What areas of our business need the most improvement?
-    How should we address the high cancellation rate?
-    How can we get more repeat customers?
-    
-Conclusion:
-  What did we find out?
-  What is our final recommendations?
+Dear Sanjeev Kumar, CEO of Hotels Inc,
 
+Here is the report regarding the hotel bookings data. We had the goal of creating recommendations regarding how to budget marketing, allocate employees, and improve the high cancellation rate for bookings. We have spent the past few weeks analyzing the data and are ready to share with you our findings.
+		
+# Analysis
 
+## Marketing
 
+### Popular Customers
 
-
-##What is the cancellation rate for the hotels?
+Initially we decided to use the data to find the characteristics of our most popular customers.
 
 ```{r}
-cancellation_rate = round(sum(hotels$is_canceled)/nrow(hotels), 2)
-cancellation_rate
-```
-The cancellation rate across all the hotels is 37%.
-
-
-##What month is the most popular?
-
-```{r}
-month_arrivals = sort(table(hotels$arrival_date_month))
-month_arrivals = data.frame(month_arrivals)
-ggplot(data = month_arrivals, aes(x = Var1,y = Freq)) + geom_bar(stat = "identity")
-``` 
-
-From the graph we can see that May, July, and August were the most popular months for both types of hotels.
-
-##How many companies came to the hotels?
-
-```{r}
-nlevels(hotels$company)
-```
-353 companies came to the hotels.
-
-##How many total bookings were from agencies?
-
-```{r}
-nrow(hotels) - summary(hotels$agent)[2]
-```
-103,050 bookings were made through agenceis.
-
-##Which countries had the most reservations?
-
-```{r}
-country_arrivals = sort(table(hotels$country), decreasing = TRUE)
-country_arrivals = data.frame(country_arrivals)[1:10,]
-country_arrivals
-ggplot(data = country_arrivals, aes(x = Var1,y = Freq)) + geom_bar(stat = "identity")
+#create a column of the total amount spent
+hotels$total_nights_stayed = hotels$stays_in_week_nights + hotels$stays_in_weekend_nights
+totalstay = hotels$total_nights_stayed
+#distribution of duration of stay
+hist(totalstay, breaks = 50, xlim = c(0,30), ylim = c(0,30000), main = "Average Duration of Stay (in days)")
 ```
 
-People from PRT, GBR, and FRA had the most bookings.
+##### Bookings for Each Market Segment
+```{r}
+#where are the bookings coming from?
+table(hotels$market_segment)
+```
 
+From the above histogram, most of the bookings are 3 days long and the majority of them come from offline and online travel agents and tour operators.
+
+##### Frequency for Number of Adults Traveling Together
+```{r}
+#frequency table for how many adults traveling together 
+table(hotels$adults)
+```
+
+##### Traveling with Children
+```{r}
+#column for traveling with children
+hotels$childyes = ifelse(hotels$children > 0 , "1", "0")
+hotels$childyes = as.factor(hotels$childyes)
+
+#are they traveling with children?
+table(hotels$childyes)
+```
+
+Overall, with consideration to the 2 above tables, the most popular customer is usually traveling without children and with 2 other adult travelers. They stay around 3 days. Moreover, most of these reservations are booked through travel agents. From the data, it can be inferred that these hotels are near airports or heavily involved in the aviation industry, as they serve a high volume of reservations from the aviation market segment and most reservations are booked by adults traveling together.
+
+### Distribution Channel Revenue
+
+Next, we analyzed which distribution channel was producing the most revenue.
+
+```{r}
+#column to find out how much is spent in total
+hotels$total_spent = hotels$total_nights_stayed*hotels$adr
+
+#create an aggregate table of how much is revenue comes from each distribution channel
+agg_spending = aggregate(total_spent ~ distribution_channel, data = hotels, sum)
+
+#remove the undefined column
+agg_spending = agg_spending[-5,]
+
+#graph of the aggregate data
+ggplot(data = agg_spending, aes(x = reorder(distribution_channel,total_spent), y = total_spent)) + geom_bar(stat = 'identity') + xlab('Distribution Channel') + ylab('Revenue') + ggtitle('Revenue by Distribution Channel') 
+```
+
+From the above graph of the distribution channels in the data, it is clear that travel agents and tour operators brought in the most revenue of over $30,000,000, nearly 6 times that of the next best distribution channel. 
+
+### Future Marketing Spend
+
+Lastly, in terms of marketing, we looked at where marketing spend would be best allocated.
+
+```{r}
+#find the mean nights stayed in each market segment
+meanstay = tapply(hotels$total_nights_stayed , hotels$market_segment, mean, na.rm=TRUE)
+
+#graph of the nights stayed per market segment 
+barplot(sort(meanstay), cex.names=0.6, ylim = c(0,5), main = "Duration of Stay by Market Segment", ylab = "Average Stay (in days)")
+
+
+#finds the average spending in each market segment
+averagespend = sort(tapply(hotels$adr, hotels$market_segment, mean, na.rm=TRUE))
+
+#graph of the above spending table
+barplot(sort(averagespend), cex.names=0.6, main = "Average Spend per Day by Market Segment", ylab = "Average Stay (in days)")
+
+```
+
+In the above graphs, we can see that among paying customers, the corporate market segment falls behind the others in terms of duration of stay. They also spend the least among paying guests. Thus, this is a market segment where marketing should find ways to boost spending and incentives to increase their stay. These may include discounts or other amenities that may be appealing to customers traveling for business.
+
+###### Repeat vs New Customer Average Days Stayed 
+
+```{r}
+#Do repeat customers (1) stay longer than non-repeat customers (0)?
+repeatstay = tapply(hotels$total_nights_stayed, hotels$is_repeated_guest, mean, na.rm=TRUE)
+names(repeatstay)[names(repeatstay) == 0] = "New"
+names(repeatstay)[names(repeatstay) == 1] = "Repeat"
+repeatstay
+```
+
+###### Repeat vs New Customer Spending 
+
+```{r}
+#Do repeat customers (1) spend more per day than non-repeat customers (0)?
+repeatspend = tapply(hotels$adr, hotels$is_repeated_guest, mean, na.rm=TRUE)
+names(repeatspend)[names(repeatspend) == 0] = "New"
+names(repeatspend)[names(repeatspend) == 1] = "Repeat"
+repeatspend
+```
+
+Another customer segment that we should invest more into marketing to are our repeat customers. On average, they stay, half the time as non-repeat guests and spend about $40 less per night. This may be due to a variety of factors, such as because repeat customers come back often, they might spend less time on each visit. A rewards program based on spending could help incentive guests to revisit as well as spend more on each trip.
+
+#### Getting Repeat Customers
+
+We look at the number of customers who are repeat customers. In the following table, 1 corresponds with a repeat guest and 0 equates to a non-repeat guest.
+
+##### Percentage of Repeated Guests
+```{r}
+#table for proportion of repeated guests in the entire data set
+round(prop.table(table(hotels$is_repeated_guest)), 3)
+```
+From the above code, we can see that of all customers, 96.8% are not repeat customers while 3.2% are. In order to determine how we can increase the rate at which we retain customers, we can look at factors that correspond with both repeat and non-repeat customers and see if there are any trends among those groups. 
+
+We now create prop tables showing the likelihood someone is a repeat customer based on different factors. We chose to look at market segment, how long someone waited on the waiting list for and the customer type. As these are variables that will directly impact someones experience and reason for booking a hotel, we wanted to explore the relationship these have with predicting someones likelihood of becoming a repeat guest. 
+
+
+Start by making a new variable that shows if people have waited for longer than a week or not (called wait_long). Make a prop table to show how many people have waited on the wait list for more than a week, and how many for less than a week. 
+
+##### Proportion of Guests Wait Times
+```{r}
+#proportions of how many people had to wait over a week
+hotels$wait_long <- ifelse(hotels$days_in_waiting_list > 7, "Long", "Short")
+hotels$wait_long <- as.factor(hotels$wait_long)
+round(prop.table(table(hotels$wait_long)), 3)
+```
+
+Here we can see that ~97% of people had to wait for less than a week whereas less than 3% of people had to wait for longer than a week. 
+
+##### Repeat Customers by Market Segment
+```{r}
+#prop table for repeat guests within market segments
+repeat_segment = prop.table(table(hotels$market_segment, hotels$is_repeated_guest), 1) 
+round(repeat_segment, 3)
+```
+
+##### Repeat Customer by Wait Time
+```{r}
+#prop table for repeat guests and how long they waited
+repeat_waittime = prop.table(table(hotels$wait_long, hotels$is_repeated_guest), 1)
+repeat_waittime
+```
+
+
+##### Repeat Customers by Customer Type
+```{r}
+##prop table for repeat guests and their type
+repeat_type = prop.table(table(hotels$customer_type, hotels$is_repeated_guest), 1) 
+repeat_type
+```
+
+From the above information, we can see some general trends. First, when looking at the market segment, Aviation, Complementary and Corporate segments have the greatest proportion of people who are repeat customers (all greater than 25%). 
+
+When looking at wait times, it is clear that significantly more people who have waited for short periods of times become repeat customers (~3% of people who waited in short lines are repeat customers, ~.4% of guests who waited in long lines are repeat customers).
+
+Lastly, it appears that over a quarter of "Group" customer types are repeat customers, whereas less than 5% of all other customer types are repeat customers. 
+
+Based on these findings, in order to increase the amount of repeat customers, we can recommend targeting customers in the Aviation, Complementary and Corporate market segments. Also, we need to implement measures to keep wait times down. Shorter wait times equate to a higher likelihood of becoming a repeat customer. Lastly, we should heavily target Group customers as they are also more likely than other other customer types to be repeat guests. 
+
+In further analysis, we would run hypothesis testing to make sure the above relationships are actually significant. As we learn these techniques in class we will apply them to our analysis moving forward. 
+
+## Operations
+
+### Busiest Seasons
+```{r}
+#Creating a new column showing concatenated arrival date
+hotels$arrival_date <- paste(hotels$arrival_date_month, hotels$arrival_date_day_of_month, hotels$arrival_date_year, sep= ' ')
+hotels$arrival_date <- as.Date(hotels$arrival_date, '%B %d %Y')
+```
+First, we'll create a times series graph to compare the number of bookings over the time frame of the data.
+
+```{r include=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+#Ordering arrival months so they appear chronological order (w/o setting them to dates)
+hotels$arrival_date_month <- ordered(hotels$arrival_date_month, levels=c('January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'))
+
+#formatting the dates into a readable format and in a new column
+hotels$arrival_date_month_year <- strftime(hotels$arrival_date, '%B %Y')
+hotels$arrival_date_month_year <- ordered(hotels$arrival_date_month_year, levels = c("July 2015", "August 2015", "September 2015", "October 2015", "November 2015", "December 2015", "January 2016", "February 2016", "March 2016", "April 2016", "May 2016", "June 2016", "July 2016", "August 2016", "September 2016", "October 2016", "November 2016", "December 2016", "January 2017", "February 2017", "March 2017",  "April 2017",  "May 2017",  "June 2017", "July 2017",  "August 2017" ))
+
+#create an aggregate table for counts within each month
+month_year_agg <- aggregate(hotel ~ arrival_date_month_year, data=hotels, length)
+```
+
+```{r}
+#Graph showing amount of arrivals by  month and year
+ggplot(data=month_year_agg, aes(x=arrival_date_month_year, y=hotel, group = 1)) + geom_point() + geom_line() + 
+  labs(title = 'Number of bookings by month and year') +
+  xlab('Month and Year') + 
+  ylab('Number of bookings') +
+  geom_smooth(method='lm') + 
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+From the above graph, we can see the seasonal trends for hotel bookings. Most obvious is a decrease in the amount of bookings during the holiday season (November and December). This is unsurprising as holidays like Thanksgiving and Christmas mean people are likely staying with family instead of in hotels. Furthermore, business travel is likely down during these times, hurting booking rates for city hotels. Similarly, there is a small decrease in bookings during the summer months (June/July). This is more surprising as this is likely a prime season for holiday travel. 
+
+The best times of the year are during the spring (March/April) and fall (September/October). This is also surprising, but are likely explained by events such as spring break, heightened business travel, and more.
+
+In general, there is an increasing trend that demonstrates hotel bookings are increasing over time. This is certainly positive for the hotel industry.
+
+### Weedays vs. Weekends
+
+```{r}
+#Creating new column which shows which day of the week the booking was made on
+hotels$day_of_week <- weekdays(hotels$arrival_date)
+hotels$day_of_week <- ordered(hotels$day_of_week, levels=c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'))
+
+#Creating aggregate showing total bookings by day of the week
+dow_agg <- aggregate(hotel ~ day_of_week, data=subset(hotels, arrival_date >= '2015-06-01' & arrival_date <= '2017-06-01'), length)
+
+#Plotting aggregate data (divided by 104 because there are 104 weeks in 2 years)
+ggplot(data=dow_agg, aes(x=day_of_week, y=hotel / 104, fill=hotel)) + 
+  geom_bar(position = 'dodge', stat='identity') + 
+  labs(title='Number of bookings by day of the week', subtitle='For dates between July 2015 and July 2017') + 
+  xlab('Day of the Week') + 
+  ylab('Number of Bookings')
+```
+
+From this graph, we can see an interesting trend for hotel bookings throughout the typical week. Starting early in the week (Tuesday), there are a low amount of bookings (around 115/day). As it approaches Friday, the amount of bookings increases until it maxes out at around 166 bookings/day. Between Friday and Sunday, the amount of bookings decreases until is reaches an average of 115/day on Sunday. From this, we can see that the weekends generally do have more bookings.
+
+The main outlier in this analysis is Monday. Monday has the third highest bookings per day (only after Friday and Thursday) at around 151 bookings/day. This is likely due to an increased amount of business travel at the start of the week.
+
+## High Cancellation Rates
+
+### The Issue
+The major issue facing the hotels is that there is a trend of high cancellation rates as shown from the following table.
+
+##### Percentage of Canceled Bookings
+```{r}
+#proportion of bookings that are canceled
+prop_cancel = prop.table(table(hotels$is_canceled))
+names(prop_cancel)[names(prop_cancel) == 0] = "Not Canceled"
+names(prop_cancel)[names(prop_cancel) == 1] = "Canceled"
+prop_cancel
+```
+
+The cancellation rate is ~37% across the entire data set. 
+
+### Cancellation Rate Trends
+
+#### Over Time
+
+```{r include=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+#create a new row to detail month numbers
+hotels$month_num = match(hotels$arrival_date_month, month.name)
+
+#summarize the number of cancellations by month in each year
+num_cancelations_by_year_month = group_by(hotels, arrival_date_year, month_num, is_canceled) %>% 
+  summarize(count = n())
+```
+
+```{r}
+#graph of the data over time
+ggplot(num_cancelations_by_year_month, aes(x = month_num, y = count)) +
+  geom_bar(aes(fill = as.factor(is_canceled)),stat = "identity") +
+  facet_wrap(~arrival_date_year) +
+  ggtitle("Number of Cancellations and Reservations in Each Year For Each Month") +
+  scale_x_continuous(name="Month", breaks = seq(0,12, 1))
+```
+
+From this graph, we can see the total amount of bookings and cancellation in each month/year generally follow the same trend. To get a deeper understanding of the ratio between these two numbers, we can look at the mean cancellation rate over time:
+
+```{r}
+#Find average cancellation rate by month and year
+mean_cancelation_date <- aggregate(is_canceled ~ arrival_date_month_year, data=hotels, mean)
+
+#Plot average cancellation rate
+ggplot(mean_cancelation_date, aes(x=arrival_date_month_year, y=is_canceled, group=1)) + 
+  geom_line() +  
+  theme(axis.text.x = element_text(angle = 90)) + 
+  ggtitle('Mean Cancellation Rate by Month and Year') + 
+  xlab('Month and Year') + 
+  ylab('Cancellation Rate')
+```
+
+From this graph, the general trend seems to be that cancellation rates are the highest in the summer (around June) and the lowest in the Winter (around November/December). However, it is hard to extrapolate any general trend from this data. For some reason, there seems to have been a major decrease in cancellation rates between July 2015 and November 2015, which only recovered around April 2017. There also seems to have been a significant amount of volatility in cancellation rates between November 2015 and July 2015. Both of these trends are difficult to explain.
+
+#### Repeat Cancellations
+
+```{r}
+#create a new column for if the customer has ever previously canceled
+hotels$repeat_cancel <- ifelse(hotels$previous_cancellations >=1, "Yes", "No")
+```
+
+We can determine if there is a relationship between people who have canceled in the past, and people who have canceled their current reservations. 
+
+##### Proportion of Repeated Cancellations
+```{r}
+#prop table comparing repeat cancellations to current canceled bookings
+propcancel <- prop.table(table(hotels$is_canceled, hotels$repeat_cancel),2)
+propcancel
+```
+
+To further visualize this, lets create a graph.  
+
+```{R}
+#graph of previous and current cancellations
+barplot(propcancel, xlab = "Previous Cancel?", legend = c("Not Cancelled", "Cancelled"), col = terrain.colors(3))
+```
+
+From this table and bar plot, we can see that 91.6% of people who have previously canceled a booking end up canceling again. Based on this, it is safe to implement a strike system; when someone cancels a reservation, they get a strike. If someone obtains three strikes they can no longer book a hotel room. Similarly, we could implement a policy that requires a down payment on any room booking. This way, even if people do cancel, we still make money off of them. 
+
+# Conclusions
+
+From our analysis, there are a few main takeaways.
+
+With regard to marketing, it is obvious that travel agents and tour operators are the most important distribution channel for hotels, making up well over 80% of all revenue from all distribution channels. This is largely because they are responsible for some of the longest hotel stays and most spend per day. Also of interest is the importance of short waiting times. Only 3% of guests returned if they had to wait in a queue, and 0.4% of guests returned if they had to wait over a week in a queue. This is certainly concerning, especially if a hotel has existing capacity issues.
+
+With regard to operations, there are two main takeaways. First, the winter is our worst performing season, followed closely by the summer months. It may be worth investigating why this is and potential promotions which may increase bookings during these times. Second, the weekdays with the lowest hotel bookings are Tuesdays and Sundays, at around 23.3% less bookings than the average weekday. Once again, it may be worth offering promotions during these times to encourage increased bookings.
+
+Last, are the high cancellation rates. As noted above, 91.6% of people who have canceled a room in the past are likely to do it again. This may warrant a strike system where guests who have 3 canceled rooms in the past are disallowed from making future reservations. However, a general system  where guests who have canceled in the past are given limited ability to make any subsequent bookings would also work. 
+
+We hope that you find our analyses and recommendations useful moving forward and hope that we can work together again in the future.
+
+Best Regards,
+
+Chai and Some Biscuits
