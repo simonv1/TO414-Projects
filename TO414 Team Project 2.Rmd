@@ -1,0 +1,58 @@
+---
+title: "GP2"
+author: 
+date: "3/17/2021"
+output: html_document
+---
+## Importing and Cleaning Data
+
+```{r}
+library(tidyverse, warn.conflicts = FALSE)
+library(lubridate, warn.conflicts = FALSE)
+
+loans <- read.csv('loans.csv', stringsAsFactors = TRUE)
+
+#Factorizing variables
+loans$loan_status_description <- as.factor(loans$loan_status_description)
+loans$prosper_rating <- as.factor(loans$prosper_rating)
+loans$listing_category_id <- as.factor(loans$listing_category_id)
+loans$income_range_description <- as.factor(loans$income_range_description)
+loans$employment_status_description <- as.factor(loans$employment_status_description)
+loans$occupation <- as.factor(loans$occupation)
+loans$borrower_state <- as.factor(loans$borrower_state)
+loans$borrower_city <- as.factor(loans$borrower_city)
+loans$scorex <- as.factor(loans$scorex)
+
+#Converting logical variables into factors
+loans$income_verifiable <- as.factor(ifelse(loans$income_verifiable == TRUE, 1, 0))
+loans$is_homeowner <- as.factor(ifelse(loans$is_homeowner == TRUE, 1, 0))
+
+#Dropping redundant columns
+loans$loan_status <- NULL
+loans$income_range <- NULL
+  
+#Creating new columns
+loans$loan_origination_month <- month(strptime(loans$loan_origination_date, format='%m/%d/%Y'))
+loans$first_recorded_credit_line_year <- year(strptime(loans$first_recorded_credit_line, format='%m/%d/%Y'))
+
+loans$loan_origination_date <- NULL
+loans$first_recorded_credit_line <- NULL
+
+loans
+```
+
+## Linear Regression Model
+```{r}
+linearmodel <- step(lm(formula = borrower_rate ~ scorex + prosper_score + listing_category_id +stated_monthly_income + employment_status_description + monthly_debt + current_delinquencies + delinquencies_last7_years + inquiries_last6_months + bankcard_utilization + first_recorded_credit_line_year, data=loans))
+
+summary(linearmodel)
+```
+
+## Logistic Regression Model
+```{r}
+#WARNING: Running this will create 6734 columns. I would recommend selecting only the variables you want to run in the logistic regression model and going from there.
+loans_dummy <- as.data.frame(model.matrix(~.-1,loans))
+
+logisticmodel <- step(glm(formula = borrower_rate ~ scorex + prosper_score + stated_monthly_income + employment_status_description + monthly_debt + current_delinquencies + delinquencies_last7_years + inquiries_last6_months + bankcard_utilization + first_recorded_credit_line_year, data=loans, family = 'binomial'))
+```
+
