@@ -32,27 +32,46 @@ loans$loan_status <- NULL
 loans$income_range <- NULL
   
 #Creating new columns
-loans$loan_origination_month <- month(strptime(loans$loan_origination_date, format='%m/%d/%Y'))
+loans$loan_origination_month <- as.factor(month(strptime(loans$loan_origination_date, format='%m/%d/%Y')))
 loans$first_recorded_credit_line_year <- year(strptime(loans$first_recorded_credit_line, format='%m/%d/%Y'))
 
 loans$loan_origination_date <- NULL
 loans$first_recorded_credit_line <- NULL
+loans$borrower_city <- NULL
+loans$borrower_state <- NULL
 
-loans
+loans$number_of_days <- NULL
+loans$principal_balance <- NULL
+loans$loan_status_description <- NULL
+loans$listing_monthly_payment <- NULL
+
+loans <- na.omit(loans)
 ```
 
 ## Linear Regression Model
 ```{r}
-linearmodel <- step(lm(formula = borrower_rate ~ scorex + prosper_score + listing_category_id +stated_monthly_income + employment_status_description + monthly_debt + current_delinquencies + delinquencies_last7_years + inquiries_last6_months + bankcard_utilization + first_recorded_credit_line_year, data=loans))
+linearmodel <- step(lm(formula = borrower_rate ~., data=loans))
 
 summary(linearmodel)
+
+lm2 <- lm(formula = borrower_rate ~ amount_funded + prosper_rating + 
+    listing_term + scorex + prosper_score + listing_category_id + 
+    income_range_description + stated_monthly_income + income_verifiable + 
+    dti_wprosper_loan + employment_status_description + lender_indicator + 
+    monthly_debt + current_delinquencies + public_records_last10_years + 
+    credit_lines_last7_years + current_credit_lines + open_credit_lines + 
+    bankcard_utilization + total_open_revolving_accounts + real_estate_balance + 
+    revolving_balance + total_inquiries + was_delinquent_derog + 
+    is_homeowner + loan_origination_month, data = loans)
+
+summary(lm2)
+
 ```
 
 ## Logistic Regression Model
 ```{r}
-#WARNING: Running this will create 6734 columns. I would recommend selecting only the variables you want to run in the logistic regression model and going from there.
-loans_dummy <- as.data.frame(model.matrix(~.-1,loans))
-
-logisticmodel <- step(glm(formula = borrower_rate ~ scorex + prosper_score + stated_monthly_income + employment_status_description + monthly_debt + current_delinquencies + delinquencies_last7_years + inquiries_last6_months + bankcard_utilization + first_recorded_credit_line_year, data=loans, family = 'binomial'))
+loans$defaulted <- ifelse(loans$loan_status_description == 'DEFAULTED' | loans$loan_status_description == 'CHARGEOFF', 1, 0)
+logisticmodel <- glm(formula = defaulted ~ ., data=loans, family = 'binomial')
+summary(logisticmodel)
 ```
 
