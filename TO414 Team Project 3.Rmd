@@ -1,0 +1,119 @@
+---
+title: "GP3"
+author: "TO 414 Team 11"
+date: "4/9/2021"
+output: html_document
+---
+
+## Questions
+
+What customer factors are associated with higher churn rates?
+Does bundling decrease the likelihood of churn?
+How effective are automatic payments are decreasing the likelihood of churn?
+How does friction in the buying process influence churn?
+
+
+```{r}
+library(caret)
+```
+
+## Data preparation
+
+```{r}
+tele <- read.csv('telecom_users.csv',stringsAsFactors = T)
+summary(tele)
+str(tele)
+
+tele$X <- NULL
+tele$customerID <- NULL
+
+tele$SeniorCitizen <- as.factor(tele$SeniorCitizen)
+
+tele <- na.omit(tele)
+
+set.seed(123)
+
+test_set <- sample(1:nrow(tele), round(nrow(tele)*0.3))
+
+tele_train <- tele[-test_set, ]
+tele_test <- tele[test_set, ]
+```
+
+## Data Exploration
+
+```{r}
+
+```
+
+
+## Decision Tree
+```{r}
+library(C50)
+
+tele_tree <- C5.0(Churn ~ ., data=tele_train)
+
+tele_tree_pred <- predict(tele_tree, tele_test)
+
+confusionMatrix(tele_tree_pred, tele_test$Churn)
+
+summary(tele_tree)
+
+library(randomForest)
+
+tele_rf <- randomForest(Churn ~ ., data=tele_train)
+
+```
+
+## Logistic Regression
+
+```{r}
+tele_logit <- step(glm(Churn ~., tele_train, family='binomial'))
+summary(tele_logit)
+
+tele_logit_pred <- predict(tele_logit, tele_test)
+tele_logit_pred <- as.factor(ifelse(tele_logit_pred >= 0.5, 'Yes', 'No'))
+confusionMatrix(tele_logit_pred, tele_test$Churn)
+```
+
+## KNN Model
+
+```{r}
+telemm <- as.data.frame(model.matrix(~.-1,tele))
+
+# Normalize
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+tele_norm <- as.data.frame(lapply(telemm, normalize))
+
+# Train/Test Split
+set.seed(123)
+test_set <- sample(1:nrow(tele_norm), 200)
+
+tele_train <- tele_norm[-test_set, ]
+tele_test <- tele_norm[test_set, ]
+```
+
+```{r}
+library(class)
+
+k = 20
+tele_knn <- knn(train = tele_train, test = tele_test, cl = tele_train$Churn, k=k)
+tele_test$ChurnYes <- as.factor(tele_test$ChurnYes)
+confusionMatrix(tele_knn, tele_test$ChurnYes)
+```
+## ANN Model
+
+```{r}
+library(neuralnet)
+
+tele_ann <- neuralnet(ChurnYes ~ ., data=tele_train, hidden = c(5, 3), stepmax = 100000000)
+plot(tele_ann)
+tele_ann_pred <- predict(tele_ann, tele_test)
+tele_ann_pred <- ifelse(tele_ann_pred >= 0.5, 1, 0)
+tele_ann_pred <- as.factor(tele_ann_pred)
+
+confusionMatrix(tele_ann_pred, tele_test$ChurnYes)
+```
+
